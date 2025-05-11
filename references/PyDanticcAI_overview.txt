@@ -1,0 +1,688 @@
+# PydanticAI: GenAI App Development with a FastAPI Feel
+
+PydanticAI is a Python agent framework designed to make it less painful to build production-grade applications with Generative AI.
+
+FastAPI revolutionized web development by offering an innovative and ergonomic design, built on the foundation of Pydantic. Similarly, virtually every agent framework and LLM library in Python uses Pydantic. Yet, when we began to use LLMs in Pydantic Logfire, we couldn't find anything that gave us the same feeling.
+
+We built PydanticAI with one simple aim: **to bring that FastAPI feeling to GenAI app development.**
+
+## Why use PydanticAI?
+
+*   **Built by the Pydantic Team:** Developed by the team behind Pydantic, the validation layer for numerous popular libraries (OpenAI SDK, Anthropic SDK, LangChain, LlamaIndex, AutoGPT, Transformers, CrewAI, Instructor, and more).
+*   **Model-agnostic:** Supports OpenAI, Anthropic, Gemini, Deepseek, Ollama, Groq, Cohere, and Mistral, with a simple interface for adding other models.
+*   **Pydantic Logfire Integration:** Seamlessly integrates with Pydantic Logfire for real-time debugging, performance monitoring, and behavior tracking.
+*   **Type-safe:** Designed to make type checking powerful and informative.
+*   **Python-centric Design:** Leverages familiar Python control flow and agent composition, allowing standard Python best practices.
+*   **Structured Responses:** Uses Pydantic to validate and structure model outputs for consistency.
+*   **Dependency Injection System:** Optional DI system for providing data/services to prompts, tools, and validators, aiding testing and iteration.
+*   **Streamed Responses:** Supports streaming LLM responses with immediate validation for real-time access.
+*   **Graph Support:** Pydantic Graph allows defining complex workflows using typing hints, avoiding spaghetti code.
+
+## Getting Started: Hello World Example
+
+Here's a minimal example of PydanticAI:
+
+```python
+# hello_world.py
+from pydantic_ai import Agent
+
+agent = Agent(
+    'google-gla:gemini-1.5-flash',
+    system_prompt='Be concise, reply with one sentence.',
+)
+
+result = agent.run_sync('Where does "hello world" come from?')
+print(result.output)
+"""
+The first known use of "hello, world" was in a 1974 textbook about the C programming language.
+"""
+```
+*(This example is complete and can be run "as is")*
+
+**Explanation:** This simple exchange sends the system prompt and user query to the LLM, which returns a text response. We can enhance this by adding tools, dynamic prompts, and structured outputs.
+
+## Core Concepts: Agents
+
+Agents are PydanticAI's primary interface for interacting with LLMs. They can control entire applications or components, or interact with each other for complex workflows.
+
+### Agent Components
+
+Conceptually, an `Agent` is a container for:
+
+| Component                 | Description                                                                                    |
+| :------------------------ | :--------------------------------------------------------------------------------------------- |
+| System prompt(s)          | Developer-written instructions for the LLM.                                                    |
+| Function tool(s)          | Functions the LLM can call to get information during generation.                               |
+| Structured output type    | The structured datatype the LLM must return (if specified).                                    |
+| Dependency type constraint| Defines the type for dependencies used by prompts, tools, and validators.                      |
+| LLM model                 | Optional default LLM model for the agent.                                                      |
+| Model Settings            | Optional default settings (e.g., temperature) to fine-tune requests.                           |
+
+*Note: Agents are generic in their dependency and output types (e.g., `Agent[Foobar, list[str]]`), aiding IDEs and static type checkers.*
+
+### Agents are Designed for Reuse
+
+Like FastAPI Apps or APIRouters, Agents are intended to be instantiated once (often as module globals) and reused throughout your application.
+
+### Example: Roulette Wheel Agent
+
+Here's a toy example demonstrating dependencies (`deps_type`), tools (`@agent.tool`), and structured output (`output_type`):
+
+```python
+# roulette_wheel.py
+from pydantic_ai import Agent, RunContext
+
+roulette_agent = Agent(
+    'openai:gpt-4o',
+    deps_type=int,        # Dependency is the winning number
+    output_type=bool,     # Output is True (win) or False (loss)
+    system_prompt=(
+        'Use the `roulette_wheel` function to see if the '
+        'customer has won based on the number they provide.'
+    ),
+)
+
+@roulette_agent.tool
+async def roulette_wheel(ctx: RunContext[int], square: int) -> str:
+    """check if the square is a winner"""
+    return 'winner' if square == ctx.deps else 'loser'
+
+# Run the agent
+success_number = 18
+result = roulette_agent.run_sync('Put my money on square eighteen', deps=success_number)
+print(result.output)
+#> True
+
+result = roulette_agent.run_sync('I bet five is the winner', deps=success_number)
+print(result.output)
+#> False
+```
+
+## Running Agents
+
+There are four primary ways to run an agent:
+
+1.  `agent.run()`: Async coroutine, returns `RunResult` with the complete response.
+2.  `agent.run_sync()`: Synchronous function, returns `RunResult` (uses `run()` internally).
+3.  `agent.run_stream()`: Async coroutine, returns `StreamedRunResult` for async iteration over the response.
+4.  `agent.iter()`: Async context manager, returns `AgentRun` for iterating over the underlying graph nodes.
+
+### Basic Run Methods (`run`, `run_sync`, `run_stream`)
+
+```python
+# run_agent.py
+import asyncio
+from pydantic_ai import Agent
+
+agent = Agent('openai:gpt-4o')
+
+# Synchronous run
+result_sync = agent.run_sync('What is the capital of Italy?')
+print(result_sync.output)
+#> Rome
+
+async def main():
+    # Asynchronous run
+    result = await agent.run('What is the capital of France?')
+    print(result.output)
+    #> Paris
+
+    # Streamed run
+    async with agent.run_stream('What is the capital of the UK?') as response:
+        print(await response.get_output())
+        #> London
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+*(This example is complete and can be run "as is")*
+
+You can pass previous messages using `message_history` to continue conversations (see [Runs vs. Conversations](#runs-vs-conversations)).
+
+### Iterating Over an Agent's Graph (`iter`)
+
+PydanticAI uses `pydantic-graph` internally to manage execution flow as a finite state machine. While `agent.run(...)` handles this automatically, `agent.iter()` provides low-level access for detailed inspection or control. It returns an `AgentRun` object, which is an async iterable over the graph nodes.
+
+#### `async for` Iteration
+
+```python
+# agent_iter_async_for.py
+import asyncio
+from pydantic_ai import Agent
+
+agent = Agent('openai:gpt-4o')
+
+async def main():
+    nodes = []
+    # Begin an AgentRun, which is an async-iterable over the nodes
+    async with agent.iter('What is the capital of France?') as agent_run:
+        async for node in agent_run:
+            # Each node represents a step in the agent's execution
+            nodes.append(node.__class__.__name__) # Store node type names for brevity
+    print(nodes)
+    # Output like: ['UserPromptNode', 'ModelRequestNode', 'CallToolsNode', 'End']
+    print(agent_run.result.output)
+    #> Paris
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+#### Manual Iteration with `.next(...)`
+
+You can drive the iteration manually, inspect/modify nodes, or implement custom logic.
+
+```python
+# agent_iter_next.py
+import asyncio
+from pydantic_ai import Agent
+from pydantic_graph import End
+
+agent = Agent('openai:gpt-4o')
+
+async def main():
+    async with agent.iter('What is the capital of France?') as agent_run:
+        node = agent_run.next_node
+        all_nodes = [node.__class__.__name__] # Store node type names
+
+        # Drive the iteration manually:
+        while not isinstance(node, End):
+            node = await agent_run.next(node)
+            all_nodes.append(node.__class__.__name__)
+
+        print(all_nodes)
+        # Output like: ['UserPromptNode', 'ModelRequestNode', 'CallToolsNode', 'End']
+        print(agent_run.result.output)
+        #> Paris
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+#### Accessing Usage and Final Output
+
+*   `agent_run.usage()`: Returns a `Usage` object with token/request counts anytime during the run.
+*   `agent_run.result`: After the run finishes (reaches `End`), this holds the final `AgentRunResult` (output, metadata).
+
+## Advanced Features & Configuration
+
+### Tools & Dependency Injection Example
+
+This example shows a bank support agent using tools, dependency injection (`deps_type`), dynamic system prompts (`@agent.system_prompt`), and structured output (`output_type`).
+
+```python
+# bank_support.py (simplified)
+from dataclasses import dataclass
+from pydantic import BaseModel, Field
+from pydantic_ai import Agent, RunContext
+# Assume bank_database.py defines DatabaseConn and its methods
+from bank_database import DatabaseConn
+import asyncio
+
+@dataclass
+class SupportDependencies:
+    customer_id: int
+    db: DatabaseConn
+
+class SupportOutput(BaseModel):
+    support_advice: str = Field(description='Advice returned to the customer')
+    block_card: bool = Field(description="Whether to block the customer's card")
+    risk: int = Field(description='Risk level of query', ge=0, le=10)
+
+support_agent = Agent(
+    'openai:gpt-4o',
+    deps_type=SupportDependencies,
+    output_type=SupportOutput,
+    system_prompt=(
+        'You are a support agent in our bank, give the '
+        'customer support and judge the risk level of their query.'
+    ),
+)
+
+@support_agent.system_prompt
+async def add_customer_name(ctx: RunContext[SupportDependencies]) -> str:
+    customer_name = await ctx.deps.db.customer_name(id=ctx.deps.customer_id)
+    return f"The customer's name is {customer_name!r}"
+
+@support_agent.tool
+async def customer_balance(
+    ctx: RunContext[SupportDependencies], include_pending: bool
+) -> float:
+    """Returns the customer's current account balance."""
+    return await ctx.deps.db.customer_balance(
+        id=ctx.deps.customer_id,
+        include_pending=include_pending,
+    )
+
+# ... (Other tools, DatabaseConn definition omitted for brevity)
+
+async def main():
+    deps = SupportDependencies(customer_id=123, db=DatabaseConn()) # Assume DatabaseConn is setup
+    result = await support_agent.run('What is my balance?', deps=deps)
+    print(result.output)
+    """
+    support_advice='Hello John, your current account balance, including pending transactions, is $123.45.' block_card=False risk=1
+    """
+
+    result = await support_agent.run('I just lost my card!', deps=deps)
+    print(result.output)
+    """
+    support_advice="I'm sorry to hear that, John. We are temporarily blocking your card to prevent unauthorized transactions." block_card=True risk=8
+    """
+
+if __name__ == '__main__':
+     # A dummy DatabaseConn for the example to run
+    class DatabaseConn:
+        async def customer_name(self, id): return "John"
+        async def customer_balance(self, id, include_pending): return 123.45
+    asyncio.run(main())
+
+```
+*Note: The complete `bank_support.py` example including `DatabaseConn` can be found in the official PydanticAI documentation/repository.*
+
+### Streaming Example
+
+This demonstrates iterating node-by-node while also streaming token deltas and tool usage information.
+
+```python
+# streaming.py
+import asyncio
+from dataclasses import dataclass
+from datetime import date, timedelta # Added timedelta for future date calculation
+
+from pydantic_ai import Agent
+from pydantic_ai.messages import (
+    FinalResultEvent, FunctionToolCallEvent, FunctionToolResultEvent,
+    PartDeltaEvent, PartStartEvent, TextPartDelta, ToolCallPartDelta
+)
+from pydantic_ai.tools import RunContext
+
+@dataclass
+class WeatherService:
+    async def get_forecast(self, location: str, forecast_date: date) -> str:
+        return f'The forecast in {location} on {forecast_date} is 24°C and sunny.'
+    async def get_historic_weather(self, location: str, forecast_date: date) -> str:
+        return f'The weather in {location} on {forecast_date} was 18°C and partly cloudy.'
+
+weather_agent = Agent[WeatherService, str](
+    'openai:gpt-4o', # Using a capable model for tool use
+    deps_type=WeatherService,
+    output_type=str,
+    system_prompt='Providing a weather forecast at the locations the user provides.',
+)
+
+@weather_agent.tool
+async def weather_forecast(
+    ctx: RunContext[WeatherService], location: str, forecast_date: date,
+) -> str:
+    """Gets the weather forecast for a specific location and date."""
+    if forecast_date >= date.today():
+        return await ctx.deps.get_forecast(location, forecast_date)
+    else:
+        return await ctx.deps.get_historic_weather(location, forecast_date)
+
+output_messages: list[str] = []
+
+async def main():
+    # Ensure the date is in the future for the example logic
+    future_date = date.today() + timedelta(days=2)
+    user_prompt = f'What will the weather be like in Paris on {future_date.strftime("%A")}?' # Use calculated future date
+
+    async with weather_agent.iter(user_prompt, deps=WeatherService()) as run:
+        async for node in run:
+            if Agent.is_user_prompt_node(node):
+                output_messages.append(f'=== UserPromptNode: {node.user_prompt} ===')
+            elif Agent.is_model_request_node(node):
+                output_messages.append('=== ModelRequestNode: streaming partial request/response tokens ===')
+                async with node.stream(run.ctx) as stream: # Simplified stream handling
+                     async for event in stream:
+                         output_messages.append(f'[StreamEvent] {type(event).__name__}: {event}') # Log event type and content
+            elif Agent.is_call_tools_node(node):
+                 output_messages.append('=== CallToolsNode: streaming tool usage ===')
+                 async with node.stream(run.ctx) as stream: # Simplified stream handling
+                     async for event in stream:
+                         output_messages.append(f'[StreamEvent] {type(event).__name__}: {event}') # Log event type and content
+            elif Agent.is_end_node(node):
+                 assert run.result.output == node.data.output
+                 output_messages.append(f'=== Final Agent Output: {run.result.output} ===')
+
+if __name__ == '__main__':
+    asyncio.run(main())
+    for msg in output_messages: # Print messages one per line for readability
+        print(msg)
+    # Example output structure will vary but show node transitions and streaming events
+```
+
+### Instrumentation with Pydantic Logfire
+
+Integrate with Pydantic Logfire for observability:
+
+1.  Install and configure `logfire`.
+2.  Instrument relevant libraries (e.g., `logfire.instrument_asyncpg()`).
+3.  Initialize the `Agent` with `instrument=True`.
+
+```python
+# bank_support_with_logfire.py (changes highlighted)
+# ... imports ...
+import logfire
+
+logfire.configure()
+# logfire.instrument_asyncpg() # If using asyncpg
+
+# ... SupportDependencies, SupportOutput definitions ...
+
+support_agent = Agent(
+    'openai:gpt-4o',
+    deps_type=SupportDependencies,
+    output_type=SupportOutput,
+    system_prompt=(
+        'You are a support agent in our bank, give the '
+        'customer support and judge the risk level of their query.'
+    ),
+    instrument=True, # Enable Logfire instrumentation
+)
+
+# ... system prompts, tools, main function ...
+```
+This setup provides a detailed view of the agent's execution flow in the Logfire UI. (See Pydantic Logfire documentation for setup details).
+
+### Additional Configuration
+
+#### Usage Limits
+
+Control token and request counts using `UsageLimits` passed to `run*` methods.
+
+```python
+from pydantic_ai import Agent
+from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.usage import UsageLimits
+
+agent = Agent('anthropic:claude-3-5-sonnet-latest')
+
+# Limit response tokens
+try:
+    result_sync = agent.run_sync(
+        'What is the capital of Italy? Answer with a paragraph.',
+        usage_limits=UsageLimits(response_tokens_limit=10),
+    )
+except UsageLimitExceeded as e:
+    print(f"Limit exceeded: {e}")
+    #> Limit exceeded: Exceeded the response_tokens_limit of 10 (...)
+
+# Limit requests (useful with retries/tools)
+# ... (agent definition with a tool designed to retry) ...
+try:
+    result_sync = agent.run_sync(
+        'Trigger the retry tool',
+        usage_limits=UsageLimits(request_limit=3) # Limit total LLM calls
+    )
+except UsageLimitExceeded as e:
+    print(f"Limit exceeded: {e}")
+    #> Limit exceeded: The next request would exceed the request_limit of 3
+```
+
+#### Model (Run) Settings
+
+Fine-tune model parameters (e.g., temperature, max_tokens) using `ModelSettings` or model-specific subclasses (like `GeminiModelSettings`). Apply per-run or set defaults during Agent initialization.
+
+```python
+from pydantic_ai import Agent
+from pydantic_ai.models.gemini import GeminiModelSettings
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+# Per-run setting
+agent_openai = Agent('openai:gpt-4o')
+result_sync = agent_openai.run_sync(
+    'What is the capital of Italy?',
+    model_settings={'temperature': 0.0} # Less random output
+)
+print(result_sync.output)
+#> Rome
+
+# Model-specific settings (e.g., safety)
+agent_gemini = Agent('google-gla:gemini-1.5-flash')
+try:
+    result = agent_gemini.run_sync(
+        'Write a list of 5 very rude things...',
+        model_settings=GeminiModelSettings(
+            temperature=0.0,
+            gemini_safety_settings=[ # Stricter safety
+                {'category': 'HARM_CATEGORY_HARASSMENT', 'threshold': 'BLOCK_LOW_AND_ABOVE'},
+                {'category': 'HARM_CATEGORY_HATE_SPEECH', 'threshold': 'BLOCK_LOW_AND_ABOVE'},
+            ]
+        )
+    )
+except UnexpectedModelBehavior as e:
+    print(f"Model behavior issue: {e}") # Likely safety block
+    #> Model behavior issue: Safety settings triggered...
+```
+
+### System Prompts vs. Instructions
+
+Both guide the model, but differ in how they persist in conversation history:
+
+*   **`system_prompt`**: Included in *every* subsequent request within a conversation history. Use when the prompt is fundamental to the entire conversation across multiple turns or agents.
+*   **`instructions`**: Included *only* for the current agent run. They are *not* carried over from previous messages when `message_history` is provided. **Generally recommended** unless you specifically need persistent system prompts.
+
+```python
+# instructions.py
+from pydantic_ai import Agent
+
+agent = Agent(
+    'openai:gpt-4o',
+    # Use instructions for role setting specific to this agent's task
+    instructions='You are a helpful assistant that answers geography questions concisely.',
+)
+
+result = agent.run_sync('What is the capital of France?')
+print(result.output)
+#> Paris
+```
+
+```python
+# system_prompts.py
+from datetime import date
+from pydantic_ai import Agent, RunContext
+
+agent = Agent(
+    'openai:gpt-4o',
+    deps_type=str,
+    # Static system prompt (always included)
+    system_prompt="Use the customer's name while replying to them.",
+)
+
+# Dynamic system prompt (added at runtime, depends on context/deps)
+@agent.system_prompt
+def add_the_users_name(ctx: RunContext[str]) -> str:
+    # ctx.deps holds the dependency ('Frank' in this case)
+    return f"The user's name is {ctx.deps}."
+
+@agent.system_prompt
+def add_the_date() -> str:
+    # This one doesn't need context/deps
+    return f'The date is {date.today()}.'
+
+result = agent.run_sync('What is the date?', deps='Frank')
+print(result.output)
+#> Hello Frank, the date today is 2023-10-27. # Date will vary
+```
+
+### Reflection and Self-Correction
+
+PydanticAI allows models to retry based on validation errors (from tools or structured output) or explicit `ModelRetry` exceptions raised in tools/validators.
+
+*   Default retries: 1 (configurable per agent, tool, or validator).
+*   Access retry count via `ctx.retry`.
+
+```python
+# tool_retry.py (simplified)
+from pydantic import BaseModel
+from pydantic_ai import Agent, RunContext, ModelRetry
+# Assume fake_database.py defines DatabaseConn and its methods
+from fake_database import DatabaseConn
+
+class ChatResult(BaseModel):
+    user_id: int
+    message: str
+
+agent = Agent(
+    'openai:gpt-4o',
+    deps_type=DatabaseConn,
+    output_type=ChatResult,
+    # retries=3 # Agent-level retry setting
+)
+
+@agent.tool(retries=2) # Tool-specific retry setting
+def get_user_by_name(ctx: RunContext[DatabaseConn], name: str) -> int:
+    """Get a user's ID from their full name."""
+    print(f"Attempting to find user: {name}")
+    user_id = ctx.deps.users.get(name=name) # Assume .get returns None if not found
+    if user_id is None:
+        print(f"Retry {ctx.retry + 1}: User {name!r} not found.")
+        raise ModelRetry( # Instruct the model to try again
+            f'No user found with name {name!r}, remember to provide their full name'
+        )
+    print(f"User found: ID {user_id}")
+    return user_id
+
+# Example run assuming 'John' fails but 'John Doe' succeeds
+# Need a dummy DB for the example
+class FakeDatabaseConn:
+    users = {'John Doe': 123}
+    def get(self, name): return self.users.get(name)
+
+db = FakeDatabaseConn()
+result = agent.run_sync(
+    'Send a message to John Doe asking for coffee next week', deps=db
+)
+# Output will show the retry attempt:
+# > Attempting to find user: John
+# > Retry 1: User 'John' not found.
+# > Attempting to find user: John Doe
+# > User found: ID 123
+print(result.output)
+"""
+user_id=123 message='Hello John, would you be free for coffee sometime next week? Let me know what works for you!'
+"""
+```
+
+### Handling Model Errors
+
+If the model behaves unexpectedly (e.g., retry limit exceeded, API errors), `UnexpectedModelBehavior` is raised. Use `capture_run_messages` to access the message history for debugging.
+
+```python
+# agent_model_errors.py
+from pydantic_ai import Agent, ModelRetry, UnexpectedModelBehavior, capture_run_messages
+
+agent = Agent('openai:gpt-4o') # Default retry is 1
+
+@agent.tool_plain(retries=1) # Tool allows only 1 retry (so 2 attempts total)
+def always_retry_tool() -> int:
+    print("Tool called, raising ModelRetry...")
+    raise ModelRetry('Please try again.') # Always asks for a retry
+
+with capture_run_messages() as messages:
+    try:
+        result = agent.run_sync('Call the retry tool.')
+    except UnexpectedModelBehavior as e:
+        print(f'\nAn error occurred: {e}')
+        # > An error occurred: Tool exceeded max retries count of 1
+        print(f'Cause: {e.__cause__!r}')
+        # > Cause: ModelRetry('Please try again.')
+        print('\nMessages exchanged:')
+        for i, msg in enumerate(messages):
+            print(f"  {i+1}. {type(msg).__name__}: {msg.parts if hasattr(msg, 'parts') else 'N/A'}")
+        # Shows the sequence of requests and responses leading to the error
+    else:
+        # This part won't be reached in this specific example
+        print(result.output)
+```
+*Note: `capture_run_messages` captures messages for the *first* `run*` call within its context.*
+
+## Practical Considerations
+
+### Runs vs. Conversations
+
+*   A single `agent.run()` can handle multiple message exchanges if the LLM continues the dialogue (e.g., asks follow-up questions for tool use).
+*   Multiple `agent.run()` calls compose a longer conversation, especially when state needs to be maintained between interactions or API calls. Pass `message_history=previous_result.new_messages()` to link runs.
+
+```python
+# conversation_example.py
+from pydantic_ai import Agent
+
+agent = Agent('openai:gpt-4o')
+
+# First run
+result1 = agent.run_sync('Who was Albert Einstein?')
+print(f"Run 1 Output: {result1.output}")
+# > Run 1 Output: Albert Einstein was a German-born theoretical physicist...
+
+# Second run, providing context from the first run
+result2 = agent.run_sync(
+    'What was his most famous equation?',
+    message_history=result1.new_messages(), # Pass previous messages
+)
+print(f"Run 2 Output: {result2.output}")
+# > Run 2 Output: Albert Einstein's most famous equation is E = mc^2.
+```
+*(This example is complete and can be run "as is")*
+
+### Type Safety by Design
+
+PydanticAI leverages Pydantic's type hints for runtime validation (tool parameters, `output_type`) and works well with static type checkers (mypy, pyright). While typing isn't mandatory everywhere, it's encouraged and integral to PydanticAI's design.
+
+*   Agent generics (`Agent[DepsType, OutputType]`) help ensure correct dependency and output handling.
+*   Type hints should clarify, not confuse. Report issues if they become problematic.
+
+Example type checking with mypy:
+
+```python
+# type_mistakes.py
+from dataclasses import dataclass
+from pydantic_ai import Agent, RunContext
+
+@dataclass
+class User: name: str
+@dataclass
+class WrongDep: id: int # Incorrect dependency type
+
+agent = Agent(
+    'test',
+    deps_type=User,     # Expects User dependency
+    output_type=bool,   # Expects bool output
+)
+
+# Incorrect dependency type hint in function signature
+@agent.system_prompt
+def add_user_name(ctx: RunContext[WrongDep]) -> str:
+    # This would ideally use ctx: RunContext[User]
+    return f"The user's ID is {ctx.deps.id}." # Accessing .id assumes WrongDep
+
+def process_result(x: bytes) -> None: # Expects bytes input
+    pass
+
+result = agent.run_sync('Does their name start with "A"?', deps=User('Anne'))
+# Incorrectly passing the bool output to a function expecting bytes
+process_result(result.output)
+```
+
+Running `mypy type_mistakes.py` would flag errors:
+1.  Incompatible type for the `system_prompt` decorator argument (`RunContext[WrongDep]` vs expected `RunContext[User]`).
+2.  Incompatible type for the `process_result` function argument (`bool` vs expected `bytes`).
+
+## Documentation & Next Steps
+
+### Documentation Format (llms.txt)
+
+The PydanticAI documentation is also available in `llms.txt` format (Markdown-based, suited for LLMs).
+
+*   `llms.txt`: Brief description with links to sections. [Structure details here](https://github.com/pydantic/llms-text).
+*   `llms-full.txt`: Same structure, but with all linked content included (may be large for some LLMs).
+
+*Note: Native framework/IDE support for this format is limited; an MCP server can parse `llms.txt`.*
+
+### Next Steps
+
+*   **Try the Examples:** Follow instructions in the provided code examples.
+*   **Read the Docs:** Learn more about building applications ([Official PydanticAI Documentation Link - Placeholder]).
+*   **Consult the API Reference:** Understand the detailed interface ([Official PydanticAI API Reference Link - Placeholder]).

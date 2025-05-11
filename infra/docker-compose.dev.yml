@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+
+  supabase-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - supabase_data:/var/lib/postgresql/data
+      - ./supabase_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+    ports:
+      - "5433:5432"
+
+  supabase-gotrue:
+    image: supabase/gotrue:v2.139.0
+    depends_on:
+      - supabase-db
+    environment:
+      GOTRUE_DB_DRIVER: postgres
+      DB_HOST: supabase-db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: postgres
+      GOTRUE_SITE_URL: http://localhost:9999
+      GOTRUE_JWT_SECRET: supersecret
+    ports:
+      - "9999:9999"
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.90.0
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel/config.yaml
+    command: ["--config=/etc/otel/config.yaml"]
+    ports:
+      - "4317:4317"
+
+volumes:
+  supabase_data: {}
