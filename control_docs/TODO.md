@@ -22,12 +22,12 @@ Key: `[x]` Done | `[~]` WIP / In Progress | `[ ]` To Do
 | `[ ]`  | T-12    | QA      | 19‑Mai | 3   | Pytest cobrindo regras 1-5 (≥ 90 % cobertura)                  |
 | `[ ]`  | T-13    | DevOps  | 20‑Mai | 2   | Atualizar painel OTEL com `divergence_rate`                    |
 | `[ ]`  | T-14    | Backend | 12-Mai | 3   | Implement `medflowai.adapters.OpenAIAdapter` & `GeminiAdapter` |
-| `[~]`  | T-15    | Backend | 12-Mai | 3   | Implement `RAGTool` & integrate into `MedicalRAGAgent` - _RAGTool implementation complete (Supabase+OpenAIEmbeddings), ready for integration & testing. MedicalRAGAgent LLM synthesis OpenAI part done._ |
-| `[ ]`  | T-16    | Backend | 13-Mai | 3   | Implement **DivergenceReviewAgent** (LLM qualitative review) |
-| `[ ]`  | T-17    | Backend | 13-Mai | 3   | Integrate DivergenceReviewAgent into Orchestrator |
-| `[ ]`  | T-18    | Backend | 14-Mai | 2   | Implement O3-mini Arbiter stub integration |
+| `[x]`  | T-15    | Backend | 12-Mai | 3   | Implement `RAGTool` & integrate into `MedicalRAGAgent` - _RAGTool implementation complete (Supabase+OpenAIEmbeddings), ready for integration & testing. MedicalRAGAgent LLM synthesis OpenAI part done._ |
+| `[x]`  | T-16    | Backend | 13-Mai | 3   | Implement **DivergenceReviewAgent** (LLM qualitative review) |
+| `[x]`  | T-17    | Backend | 13-Mai | 3   | Integrate DivergenceReviewAgent into Orchestrator – `process_specialist_outputs` + arbiter stub + tests |
+| `[~]`  | T-18    | Backend | 14-Mai | 2   | Implement O3-mini Arbiter stub integration (stub method in orchestrator; micro-service yet to be created) |
 | `[ ]`  | T-19    | Backend | 15-Mai | 5   | Enhance `OrchestratorPrincipal` with branching & retry |
-| `[ ]`  | T-20    | QA      | 17-Mai | 3   | Unit tests (>85 %) for adapters, RAG, **divergence agent**, orchestrator |
+| `[~]`  | T-20    | QA      | 17-Mai | 3   | Unit tests (>85 %) for adapters, RAG, **divergence agent**, orchestrator |
 | `[ ]`  | T-21    | QA      | 17-Mai | 3   | E2E tests (happy-path & divergence flow)                      |
 | `[x]`  | T-22    | DevOps  | 11-Mai | 2   | docker-compose.dev com Redis + Supabase + OTEL |
 | `[x]`  | T-23    | Backend | 12-Mai | 3   | Implement Supabase DAL (`medflowai.db.supabase_client`) |
@@ -85,5 +85,5 @@ Key: `[x]` Done | `[~]` WIP / In Progress | `[ ]` To Do
 
 ### General
 
-*   `[~]` chore: Commit all recent code and documentation changes with a comprehensive message.
-    *   Status: WIP (Doc merge tasks completed, ready to prepare commit).
+*   `[x]` chore: Commit all recent code and documentation changes with a comprehensive message.
+    *   Status: Done.

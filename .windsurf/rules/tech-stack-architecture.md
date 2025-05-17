@@ -4,7 +4,7 @@ trigger: always_on
 
 # Technology Stack & Key Architecture
 
-- Main Programming Languages & Versions: **Python 3.9** (backend), **TypeScript / Next.js 14** (frontend)
+- Main Programming Languages & Versions: **Python 3.12** (backend), **TypeScript / Next.js 14** (frontend)
 - Key Frameworks/Libraries:
     - OpenAI Agents SDK (v0.3+)  
     - OpenAI Python (v1.*)

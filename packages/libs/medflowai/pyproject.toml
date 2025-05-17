@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "medflowai"
+version = "0.1.0"
+description = "Core library for MedflowAI platform"
+authors = ["Rafael Oliveira <rafael.oliveira.b@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+openai = "==1.78.0"
+fastapi = "~=0.115.12"
+structlog = "~=25.3.0"
+pydantic = "~=2.11.4"
+pydantic-ai = "~=0.1.11"
+sqlalchemy = "~=2.0.40"
+asyncpg = "~=0.29"
+openai-agents = "~=0.0.14"
+google-genai = "~=1.14.0"
+argcomplete = "~=3.6.2"
+langchain-core = "~=0.2.43"
+langchain-openai = "~=0.1.25"
+langchain-text-splitters = "~=0.2.4"
+langchain-community = "~=0.2.19"
+langsmith = "~=0.1.147"
+supabase = "~=2.15.1"
+httpx = "~=0.28.1"
+neo4j = "~=5.28.1"
+prometheus-client = "~=0.21.1"
+pydantic-settings = "^2.3.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "~=8.3.5"
+pytest-asyncio = "~=0.26.0"
+pytest-cov = "~=6.1.1"
+python-dotenv = "~=1.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

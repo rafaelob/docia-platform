@@ -16,10 +16,12 @@ _Source: Legacy FEATURES.txt, Last Updated: 2025-05-10_
 | F-05 | Agente Triagem          | 🟡 Placeholder funcional, falta LLM |
 | F-06 | Especialista GPT-4.1    | 🟡 Adapters em desenvolvimento (T-14) |
 | F-07 | Especialista Gemini 2.5 | 🟡 Adapters em desenvolvimento (T-14) |
-| F-08 | Reconciliação           | ⬜️ Planejado (T-16, T-17) |
+| F-08 | Reconciliação           | 🟡 Parcial – Divergence review integrated; arbiter escalation stub in place (T-17) |
 | F-09 | Juiz O3-mini            | ⬜️ Stub planejado (T-18) |
 | F-13 | Case persistence (Supabase) | 🟡 Setup em andamento (T-22/23) |
 | F-14 | DAL Supabase (CRUD cases) | ✅ MVP implementado |
+| F-15 | MedicalRAGAgent patient context  | ✅ New field `patient_context` enriches retrieval; unit tests green |
+| F-16 | DivergenceReviewAgent   | ✅ Implemented | LLM-based qualitative comparison of two specialist reports. Returns `equivalent` or `divergent` with justification per ADR-005; integrated into medflowai.agents and unit-tested. |
 
 ### Clinical Reconciliation (MVP)
 
@@ -56,7 +58,7 @@ _Source: Legacy FEATURES.txt, Last Updated: 2025-05-10_
 ### 4. Specialized Agent Implementations (Initial Set)
 *   **Description**: A suite of pre-built, specialized agents forms the initial building blocks for MedflowAI workflows:
     *   `TriageAgent`: Analyzes initial user queries to determine intent and route them to the appropriate specialized agent or workflow.
-    *   `MedicalRAGAgent`: Performs Retrieval Augmented Generation by querying knowledge bases (via a functional `RAGTool` connected to Supabase with OpenAI Embeddings) and synthesizing information with an LLM to answer clinical questions.
+    *   `MedicalRAGAgent`: Performs Retrieval Augmented Generation by querying knowledge bases (via a functional `RAGTool` connected to Supabase with OpenAI Embeddings) and synthesizing information with an LLM to answer clinical questions. **Enhanced: supports `patient_context` for more specific retrieval.**
     *   `MCPInterfaceAgent`: Interacts with external Medical Consultation Platforms (MCPs) or other healthcare IT systems via the `MCPToolWrapper`.
     *   `VerificationAgent`: Verifies claims, facts, or agent-generated content against provided sources or guidelines.
 *   **Status**: Implemented (Agents migrated and structured).

@@ -10,9 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created initial control documents: `SYSTEM_DESIGN.md`, `TODO.md`, `FEATURES.md` to reflect the new library structure and project status.
 - ADR-005: critérios de divergência clínica
 - Atualizações em ROADMAP, TODO e FEATURES para Divergence engine
+- **Enhanced MedicalRAGAgent**: added `patient_context` input support; updated tests & docs.
+- `DivergenceReviewAgent` (F-16 / T-16): LLM-based qualitative review of two specialist reports. Returns JSON with `status` (`equivalent`/`divergent`) and `justification`. Includes exponential retry and unit tests.
+- **Orchestrator branching (T-17)**: Added `process_specialist_outputs` helper and arbiter escalation stub; unit tests cover equivalent/divergent paths.
 
 ### Changed
 - T-23 concluído (Supabase DAL) – FEATURE F-14 marcada como .
+- `pytest.ini` cleaned deprecated `python_paths` option.
 
 ## [0.8.0-beta] – 2025-05-08
 ### Added

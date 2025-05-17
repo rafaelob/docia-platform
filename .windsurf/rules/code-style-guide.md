@@ -4,7 +4,7 @@ trigger: always_on
 
 # MedflowAI Coding Standards
 ## Backend
-• Python 3.9; PEP 8 + Black + isort.
+• Python 3.12; PEP 8 + Black + isort.
 • Google-style docstrings, full type hints.
 • Pydantic (+ Pydantic-AI) for data / LLM output.
 • Pytest ≥ 85 % cobertura.

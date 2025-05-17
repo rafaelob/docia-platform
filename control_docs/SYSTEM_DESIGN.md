@@ -118,7 +118,7 @@ packages/libs/medflowai/
 ├── agents/
 │   ├── __init__.py             # Specific agent implementations
 │   ├── mcp_interface_agent.py  # Agent to interact with Medical Consultation Platforms (MCPs)
-│   ├── medical_rag_agent.py    # Agent for Retrieval Augmented Generation on medical knowledge
+│   ├── medical_rag_agent.py    # Agent for Retrieval Augmented Generation on medical knowledge – **now enhanced to accept an optional `patient_context` field that enriches document retrieval and prompt synthesis**
 │   ├── triage_agent.py         # Agent for initial query analysis and routing
 │   └── verification_agent.py   # Agent for verifying information or claims
 └── tools/
@@ -135,7 +135,7 @@ packages/libs/medflowai/
 *   **`core.ContextManager`**: Maintains the state and history of a conversation or task, providing necessary context to agents.
 *   **`models.AgentInput` / `models.AgentOutput`**: Standardized Pydantic models ensuring consistent data exchange between agents and the orchestrator.
 *   **`adapters.BaseLLMAdapter` and implementations**: Provide a consistent interface to various LLM providers, abstracting away provider-specific API details.
-*   **`agents.*`**: Concrete implementations of specialized agents (e.g., `TriageAgent`, `MedicalRAGAgent`) that perform specific tasks in the MedflowAI workflow.
+*   **`agents.*`**: Concrete implementations of specialized agents (e.g., `TriageAgent`, `MedicalRAGAgent` – **now enhanced to accept an optional `patient_context` field that enriches document retrieval and prompt synthesis** ) that perform specific tasks in the MedflowAI workflow.
 *   **`tools.BaseTool` and implementations**: Reusable components that agents can leverage to perform actions (e.g., `RAGTool` for knowledge retrieval, `MCPToolWrapper` for external API calls).
 *   **`tools.ToolRegistry`**: Allows agents or the orchestrator to discover and access available tools.
 
@@ -192,7 +192,7 @@ Key external dependencies for `medflowai` library:
 3.  `Orchestrator` starts with `TriageAgent`.
 4.  `TriageAgent` (using an LLM via an adapter) analyzes the query and recommends the next agent (e.g., `MedicalRAGAgent`).
 5.  `Orchestrator` invokes `MedicalRAGAgent`.
-6.  `MedicalRAGAgent` uses `RAGTool` to fetch relevant documents from a knowledge base.
+6.  `MedicalRAGAgent` uses `RAGTool` to fetch relevant documents from a knowledge base **(query is automatically augmented with `patient_context` when provided)**.
 7.  `MedicalRAGAgent` then uses an LLM (via an adapter) to synthesize an answer based on the retrieved context.
 8.  The output might be passed to `VerificationAgent` if further checks are needed.
 9.  The final response is returned through the `Orchestrator` to the calling service and then to the user.
