@@ -16,10 +16,10 @@ from supabase import Client, create_client
 class _Settings(BaseSettings):
     """Reads Supabase settings from environment variables."""
 
-    supabase_url: str = Field(..., env="SUPABASE_URL")
-    supabase_service_role_key: str = Field(..., env="SUPABASE_SERVICE_ROLE_KEY")
+    supabase_url: str = Field(..., validation_alias="SUPABASE_URL")
+    supabase_service_role_key: str = Field(..., validation_alias="SUPABASE_SERVICE_ROLE_KEY")
 
-    model_config = ConfigDict(case_sensitive=False)
+    model_config = ConfigDict(case_sensitive=False, populate_by_name=True)
 
     @field_validator("supabase_url", mode="before")
     def _strip_trailing_slash(cls, v: str) -> str:  # noqa: D401,N805

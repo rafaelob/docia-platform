@@ -8,7 +8,7 @@ Pydantic for input/output schema validation and is designed to work with LLM ada
 
 from abc import ABC, abstractmethod
 from typing import Type, Any, Optional, List, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 # Import the correct LLM adapter interface and context manager
 from ..adapters.base_llm_adapter import BaseLLMAdapter # Adjusted path
@@ -32,8 +32,7 @@ class BaseAgent(ABC, BaseModel):
     input_schema: Type[BaseModel] = GenericInput # Default to GenericInput
     output_schema: Type[BaseModel] = GenericOutput # Default to GenericOutput
 
-    class Config:
-        arbitrary_types_allowed = True # To allow types like BaseLLMAdapter
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @abstractmethod
     async def run(self, input_data: BaseModel, context: ContextManager) -> BaseModel:

@@ -8,8 +8,9 @@ trigger: always_on
 - Focus: Maintain doc-sync across control_docs; no duplication; update system design on structural changes.
 - New Code Template: PEP8, Black, isort, Google-style docstrings, type hints, unit tests.
 - Documentation Standards: Keep control_docs synced as per DOC-SYNC GUARD.
+- folder references with relevant docs:
 
-# Reference Docs Cheat-Sheet
+## References Docs Cheat-Sheet
 | Documento | Conteúdo | Quando usar |
 |-----------|----------|-------------|
 | `guide_OpenAI_Agents.txt` | Padrões de orquestração e API do OpenAI Agents SDK | Ao criar/alterar agentes ou orchestrator |

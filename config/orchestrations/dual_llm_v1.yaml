@@ -1,0 +1,75 @@
+# MedflowAI Dual-LLM Orchestration (v1)
+# 
+# This is the default orchestration for the MVP, matching the hardcoded flow in
+# `OrchestratorPrincipal` but now expressed declaratively.
+# 
+# Schema: See `medflowai.core.orchestration_config.OrchestrationConfig`
+
+id: dual_llm_v1
+description: |
+  Default dual-LLM second opinion flow with GPT-4.1 and Gemini 2.5 specialists.
+  
+  Flow:
+  1. TriageAgent routes the query
+  2. MedicalRAGAgent retrieves context
+  3. Parallel execution of GPT-4.1 and Gemini 2.5 specialists
+  4. DivergenceReviewAgent compares outputs
+  5. If divergent, escalate to O3-mini arbiter
+
+version: "0.9.0"  # Matches the library version this was authored for
+
+# Environment variables required by this orchestration
+# (validated at load time)
+env:
+  - OPENAI_API_KEY
+  - GEMINI_API_KEY
+  - SUPABASE_URL
+  - SUPABASE_SERVICE_ROLE_KEY
+
+# Flow definition: sequence of agents/tools to execute
+flow:
+  - type: agent
+    name: medflowai.agents.TriageAgent
+    on_error: abort
+    
+  - type: agent
+    name: medflowai.agents.MedicalRAGAgent
+    on_error: retry
+    
+  - type: parallel  # Special case: these two run in parallel
+    agents:
+      - name: medflowai.agents.GPT4SpecialistAgent
+        on_error: skip  # If one fails, continue with the other
+      - name: medflowai.agents.GeminiSpecialistAgent
+        on_error: skip
+    
+  - type: agent
+    name: medflowai.agents.DivergenceReviewAgent
+    on_error: abort
+    
+  - type: agent
+    name: medflowai.agents.O3ArbiterAgent
+    on_error: abort
+    condition: "{{ diverged }}"  # Only run if previous step had divergence
+
+# Per-agent LLM overrides (model, temperature, etc.)
+llm_overrides:
+  medflowai.agents.TriageAgent:
+    model: "gpt-4-1106-preview"  # Fast, cheaper model for triage
+    temperature: 0.2
+    
+  medflowai.agents.GPT4SpecialistAgent:
+    model: "gpt-4-1106-preview"
+    temperature: 0.3
+    
+  medflowai.agents.GeminiSpecialistAgent:
+    model: "gemini-1.5-pro"
+    temperature: 0.3
+    
+  medflowai.agents.DivergenceReviewAgent:
+    model: "gpt-4-1106-preview"
+    temperature: 0.0  # More deterministic for comparisons
+    
+  medflowai.agents.O3ArbiterAgent:
+    model: "gpt-4-1106-preview"
+    temperature: 0.2

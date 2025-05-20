@@ -80,7 +80,14 @@ packages/
   ...
 ```
 
-## 6. Module Ownership and Purpose
+## 6. Prompt Templates Registry & Future Orchestration Variants
+
+Canonical LLM prompt templates live in `control_docs/PROMPTS.md`.  
+Future orchestrator architectures will be defined via YAML under `config/orchestrations/` (see `control_docs/ORCHESTRATION_CONFIGS.md`).
+
+The default architecture (`dual_llm_v1`) is embedded in code today; upcoming releases will load configuration dynamically.
+
+## 7. Module Ownership and Purpose
 
 | Path                      | Purpose                                                           | Owner                      |
 | ------------------------- | ----------------------------------------------------------------- | -------------------------- |
@@ -92,11 +99,11 @@ packages/
 | `tests/`                  | Contract + e2e/QA suites                                          | **QA & Testing**           |
 | `references/`             | Read-only library docs & guides                                   | Everyone                   |
 
-## 7. Core Library: `medflowai` (`packages/libs/medflowai/`)
+## 8. Core Library: `medflowai` (`packages/libs/medflowai/`)
 
 This library is the heart of the agent orchestration and execution logic. It has been refactored from legacy code into a modular structure.
 
-### 7.1. Directory Structure of `medflowai`
+### 8.1. Directory Structure of `medflowai`
 
 ```
 packages/libs/medflowai/
@@ -128,7 +135,7 @@ packages/libs/medflowai/
     └── rag_tool.py             # Tool for Retrieval Augmented Generation from knowledge bases (Implemented with SupabaseVectorStore and OpenAIEmbeddings)
 ```
 
-### 7.2. Key Components and Their Roles
+### 8.2. Key Components and Their Roles
 
 *   **`core.BaseAgent`**: Defines the common interface and lifecycle for all agents within MedflowAI. Ensures agents are runnable by the `Orchestrator`.
 *   **`core.Orchestrator`**: Manages the sequence of agent execution based on predefined flows or dynamic decisions. Handles input/output passing between agents.
@@ -139,7 +146,7 @@ packages/libs/medflowai/
 *   **`tools.BaseTool` and implementations**: Reusable components that agents can leverage to perform actions (e.g., `RAGTool` for knowledge retrieval, `MCPToolWrapper` for external API calls).
 *   **`tools.ToolRegistry`**: Allows agents or the orchestrator to discover and access available tools.
 
-### 7.3 DivergenceReviewAgent (New)
+### 8.3 DivergenceReviewAgent (New)
 
 `DivergenceReviewAgent` is an LLM-powered reviewer that compares the outputs from two specialist agents and decides whether they are **equivalent** or **divergent**. It returns a JSON with `status` and `justification`, validated via Pydantic-AI.
 
@@ -155,7 +162,7 @@ Key points:
 * Fallback to Gemini on GPT failure.
 * Integrated into Orchestrator branching (see T-17).
 
-### 7.4 External Services (Infra)
+### 8.4 External Services (Infra)
 
 | Service     | Purpose                         | Access Pattern        |
 |-------------|---------------------------------|-----------------------|
@@ -166,7 +173,7 @@ Key points:
 
 All services run locally via `docker-compose.dev.yml` for dev. Production uses managed Supabase + Redis Cloud.
 
-## 8. Dependencies
+## 9. Dependencies
 
 Key external dependencies for `medflowai` library:
 
@@ -185,7 +192,7 @@ Key external dependencies for `medflowai` library:
 *   `SUPABASE_SERVICE_ROLE_KEY`: The service role key for backend access to Supabase.
 *   `OPENAI_API_KEY`: Required by `OpenAIEmbeddings` for generating embeddings.
 
-## 9. Data Flow (Example: Basic Query)
+## 10. Data Flow (Example: Basic Query)
 
 1.  User query enters the system (e.g., via `clinic-web` to a service endpoint).
 2.  The relevant service (e.g., Triage service) might invoke the `medflowai.Orchestrator`.
@@ -197,7 +204,7 @@ Key external dependencies for `medflowai` library:
 8.  The output might be passed to `VerificationAgent` if further checks are needed.
 9.  The final response is returned through the `Orchestrator` to the calling service and then to the user.
 
-## 10. External Reference Integration (New 2025-05-10)
+## 11. External Reference Integration (New 2025-05-10)
 
 The `references/` directory is the single source of truth for third-party specifications.
 `medflowai` embeds these docs as concrete abstractions:
@@ -217,7 +224,7 @@ The `references/` directory is the single source of truth for third-party specif
 * Config via environment variables; zero hard-coded secrets.
 * Ready-to-use Redis caching & circuit-breaker wrappers.
 
-## 11. Architectural Decision Records (ADRs)
+## 12. Architectural Decision Records (ADRs)
 
 ADR-001: Choice of Pydantic for Data Modeling
 ADR-002: Clinical DivergenceReviewAgent

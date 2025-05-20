@@ -25,13 +25,15 @@ Key: `[x]` Done | `[~]` WIP / In Progress | `[ ]` To Do
 | `[x]`  | T-15    | Backend | 12-Mai | 3   | Implement `RAGTool` & integrate into `MedicalRAGAgent` - _RAGTool implementation complete (Supabase+OpenAIEmbeddings), ready for integration & testing. MedicalRAGAgent LLM synthesis OpenAI part done._ |
 | `[x]`  | T-16    | Backend | 13-Mai | 3   | Implement **DivergenceReviewAgent** (LLM qualitative review) |
 | `[x]`  | T-17    | Backend | 13-Mai | 3   | Integrate DivergenceReviewAgent into Orchestrator – `process_specialist_outputs` + arbiter stub + tests |
-| `[~]`  | T-18    | Backend | 14-Mai | 2   | Implement O3-mini Arbiter stub integration (stub method in orchestrator; micro-service yet to be created) |
-| `[ ]`  | T-19    | Backend | 15-Mai | 5   | Enhance `OrchestratorPrincipal` with branching & retry |
+| `[x]`  | T-18    | Backend | 14-Mai | 2   | O3-mini Arbiter micro-service (`packages/services/arbiter-o3`) integrado ao Orchestrator + unit tests |
+| `[x]`  | T-19    | Backend | 20-Mai | 5   | Enhance `OrchestratorPrincipal` with branching & retry |
 | `[~]`  | T-20    | QA      | 17-Mai | 3   | Unit tests (>85 %) for adapters, RAG, **divergence agent**, orchestrator |
 | `[ ]`  | T-21    | QA      | 17-Mai | 3   | E2E tests (happy-path & divergence flow)                      |
 | `[x]`  | T-22    | DevOps  | 11-Mai | 2   | docker-compose.dev com Redis + Supabase + OTEL |
 | `[x]`  | T-23    | Backend | 12-Mai | 3   | Implement Supabase DAL (`medflowai.db.supabase_client`) |
 | `[~]`  | T-24    | QA      | 13-Mai | 2   | Fixture pytest-docker + test_db_case_flow |
+| `[x]`  | T-30    | Backend |        |     | Create central prompt registry for agents and reference in docs |
+| `[x]`  | T-38    | Backend | 20-Mai | 3   | Implement YAML schema + default `dual_llm_v1.yaml` + loader tests (orchestration variants framework) |
 
 **Total story points for sprint:** 72
 
@@ -68,9 +70,9 @@ Key: `[x]` Done | `[~]` WIP / In Progress | `[ ]` To Do
 *   `[ ]` test: Develop comprehensive unit tests for all `medflowai` components (Post T-12).
     *   Description: Achieve >85% test coverage for all library components, including agents and tools.
     *   Status: To Do.
-*   `[ ]` feat: Implement advanced orchestration flows in `medflowai.core.Orchestrator`.
-    *   Description: Add support for conditional branching, parallel execution with consensus, and robust error handling/retry logic.
-    *   Status: To Do.
+*   `[x]` feat: Implement advanced orchestration flows in `medflowai.core.Orchestrator`.
+    *   Description: Added support for conditional branching, parallel execution with consensus, and robust error handling/retry logic via YAML configuration.
+    *   Status: Completed as part of T-38.
 *   `[ ]` feat: Full Pydantic-AI integration for LLM output validation.
     *   Description: Refactor LLM adapters and agents to use Pydantic-AI for direct parsing and validation of LLM responses against Pydantic models.
     *   Status: To Do.

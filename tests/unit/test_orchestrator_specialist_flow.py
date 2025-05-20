@@ -61,4 +61,4 @@ async def test_process_specialists_divergent():
         ),
     ):
         out = await orch.process_specialist_outputs("A", "B")
-        assert out.response.startswith("[ARB] Divergent recommendations detected")
+        assert "Veredicto" in out.response

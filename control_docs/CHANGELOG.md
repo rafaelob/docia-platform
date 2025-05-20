@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enhanced MedicalRAGAgent**: added `patient_context` input support; updated tests & docs.
 - `DivergenceReviewAgent` (F-16 / T-16): LLM-based qualitative review of two specialist reports. Returns JSON with `status` (`equivalent`/`divergent`) and `justification`. Includes exponential retry and unit tests.
 - **Orchestrator branching (T-17)**: Added `process_specialist_outputs` helper and arbiter escalation stub; unit tests cover equivalent/divergent paths.
+- #### O3-mini Arbiter (T-18)
+* New FastAPI micro-service `packages/services/arbiter-o3` with `/arbiter/v1/review` endpoint using `llm_client.compare_reports` to decide between two specialist reports (GPT-4o or Gemini).
+* Integrated `medflowai.services_proxy.arbiter_client` with enum `Verdict` and updated `OrchestratorPrincipal._escalate_to_arbiter`.
+* Unit tests: `tests/services/test_arbiter_o3_unit.py`; tests pass via dummy adapters.
+- Added centralized `control_docs/PROMPTS.md` registry with template sections for TriageAgent, MedicalRAGAgent, DivergenceReviewAgent, VerificationAgent. Updated SYSTEM_DESIGN with reference.
+- Added `medflowai.core.orchestration_config` with Pydantic models + loader for YAML-based orchestrations; created `ORCHESTRATION_CONFIGS.md` doc.
 
 ### Changed
 - T-23 concluído (Supabase DAL) – FEATURE F-14 marcada como .

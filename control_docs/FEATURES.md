@@ -17,11 +17,13 @@ _Source: Legacy FEATURES.txt, Last Updated: 2025-05-10_
 | F-06 | Especialista GPT-4.1    | 🟡 Adapters em desenvolvimento (T-14) |
 | F-07 | Especialista Gemini 2.5 | 🟡 Adapters em desenvolvimento (T-14) |
 | F-08 | Reconciliação           | 🟡 Parcial – Divergence review integrated; arbiter escalation stub in place (T-17) |
-| F-09 | Juiz O3-mini            | ⬜️ Stub planejado (T-18) |
+| F-09 | Juiz O3-mini            | 🟡 Micro-service FastAPI + integração Orchestrator (T-18) |
 | F-13 | Case persistence (Supabase) | 🟡 Setup em andamento (T-22/23) |
 | F-14 | DAL Supabase (CRUD cases) | ✅ MVP implementado |
 | F-15 | MedicalRAGAgent patient context  | ✅ New field `patient_context` enriches retrieval; unit tests green |
 | F-16 | DivergenceReviewAgent   | ✅ Implemented | LLM-based qualitative comparison of two specialist reports. Returns `equivalent` or `divergent` with justification per ADR-005; integrated into medflowai.agents and unit-tested. |
+| F-17 | Central prompt registry (`PROMPTS.md`) | ✅ Implemented |
+| F-18 | YAML-driven orchestrations (`orchestration_config.load`) | ✅ Implemented | Declarative workflow definitions with support for sequential/parallel steps, error handling, and environment validation. |
 
 ### Clinical Reconciliation (MVP)
 

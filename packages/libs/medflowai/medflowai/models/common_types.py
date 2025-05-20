@@ -6,7 +6,7 @@ the UnifiedLLMResponse, ToolCall, and UsageInfo, ensuring consistent data
 handling between LLM adapters, agents, and the orchestrator.
 """
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, root_validator, ConfigDict
 from typing import Optional, List, Any, Dict
 
 class ToolCallFunction(BaseModel):
@@ -71,8 +71,7 @@ class UnifiedLLMResponse(BaseModel):
 
         yield _map_error_message
 
-    class Config:
-        extra = 'allow' # Allow extra fields if the LLM API returns more than defined
+    model_config = ConfigDict(extra='allow')
 
 if __name__ == "__main__":
     # This is primarily for module testing or example usage.

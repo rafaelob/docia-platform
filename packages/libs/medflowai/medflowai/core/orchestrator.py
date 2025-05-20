@@ -9,13 +9,28 @@ coordinating tool usage within the MedflowAI library.
 import uuid
 from typing import Dict, Any, Optional, Type, List
 
-from ..adapters.base_llm_adapter import BaseLLMAdapter # Adjusted path
-from .base_agent import BaseAgent # Correct path
-from ..tools.tool_registry import ToolRegistry # Adjusted path
-from .context_manager import ContextManager, InMemoryContextStore, BaseContextStore # Correct path
-from ..models.agent_io_models import GenericInput, GenericOutput # Correct path
-from ..models.common_types import UnifiedLLMResponse # Correct path
-from ..agents.divergence_review_agent import DivergenceReviewAgent, DivergenceReviewAgentInput, DivergenceReviewAgentOutput
+from ..adapters.base_llm_adapter import BaseLLMAdapter  # Adjusted path
+from .base_agent import BaseAgent  # Correct path
+from ..tools.tool_registry import ToolRegistry  # Adjusted path
+from .context_manager import (
+    ContextManager,
+    InMemoryContextStore,
+    BaseContextStore,
+)
+from ..models.agent_io_models import GenericInput, GenericOutput  # Correct path
+from ..models.common_types import UnifiedLLMResponse  # Correct path
+from ..agents.divergence_review_agent import (
+    DivergenceReviewAgent,
+    DivergenceReviewAgentInput,
+    DivergenceReviewAgentOutput,
+)
+from medflowai.services_proxy.arbiter_client import (
+    send_to_arbiter,
+    ArbiterRequest,
+    ArbiterResponse,
+)
+from .retry_utils import async_retry
+from .orchestration_config import OrchestrationConfig, load_orchestration_config
 
 class OrchestratorPrincipal:
     """
@@ -26,7 +41,8 @@ class OrchestratorPrincipal:
         llm_adapter_map: Dict[str, BaseLLMAdapter],
         agent_map: Dict[str, BaseAgent],
         tool_registry: ToolRegistry,
-        context_store_instance: BaseContextStore, # Expect an instance now
+        context_store_instance: BaseContextStore,  # Expect an instance now
+        orchestration_config: OrchestrationConfig | None = None,
         default_llm_adapter_name: Optional[str] = None,
         default_agent_name: Optional[str] = None
     ):
@@ -38,6 +54,7 @@ class OrchestratorPrincipal:
             agent_map (dict): A map of agent instances, keyed by agent name.
             tool_registry (ToolRegistry): An instance of the ToolRegistry.
             context_store_instance (BaseContextStore): An instance of a context store (e.g., InMemoryContextStore).
+            orchestration_config (OrchestrationConfig | None): Optional orchestration configuration.
             default_llm_adapter_name (Optional[str]): Name of the default LLM adapter to use if not specified.
             default_agent_name (Optional[str]): Name of the default agent to use if not specified (e.g., a triage agent).
         """
@@ -54,6 +71,13 @@ class OrchestratorPrincipal:
             raise ValueError(f"Default agent {self.default_agent_name} not found in agent_map.")
         
         # print("OrchestratorPrincipal initialized with shared context store.")
+
+        # Load or attach orchestration configuration for future dynamic flows.
+        # Currently used for metadata only; upcoming tasks (T-39/T-42) will
+        # execute the flow based on this model.
+        self.orchestration_config: OrchestrationConfig = (
+            orchestration_config or load_orchestration_config()
+        )
 
     def _get_context_manager_for_session(self, session_id: str) -> ContextManager:
         """
@@ -107,7 +131,12 @@ class OrchestratorPrincipal:
         
         try:
             # print(f"Orchestrator: Running agent {selected_agent.agent_name}...")
-            agent_response_model = await selected_agent.run(input_data=agent_input_data, context=context_manager)
+            agent_response_model = await async_retry(
+                selected_agent.run,
+                agent_input_data,
+                context_manager,
+                retries=2,
+            )
             # print(f"Orchestrator: Agent {selected_agent.agent_name} finished.")
 
             if hasattr(agent_response_model, "response") and isinstance(agent_response_model.response, str):
@@ -153,7 +182,12 @@ class OrchestratorPrincipal:
             divergence_agent = DivergenceReviewAgent(llm_adapter=default_llm or next(iter(self.llm_adapter_map.values())))  # type: ignore[arg-type]
 
         input_payload = DivergenceReviewAgentInput(report_a=report_a, report_b=report_b)
-        agent_response = await divergence_agent.run(input_payload, context_manager)
+        agent_response = await async_retry(
+            divergence_agent.run,
+            input_payload,
+            context_manager,
+            retries=2,
+        )
 
         # Persist assistant message if we have a textual response/justification
         if agent_response.justification:
@@ -161,16 +195,13 @@ class OrchestratorPrincipal:
 
         return agent_response
 
-    # Type alias for clarity
-    ArbiterResponse = GenericOutput
-
     async def _escalate_to_arbiter(
         self,
         report_a: str,
         report_b: str,
         divergence_output: DivergenceReviewAgentOutput,
-        session_id: str,
-    ) -> ArbiterResponse:
+        session_id: Optional[str] = None,
+    ) -> GenericOutput:
         """Placeholder escalation to the O3-mini arbiter service.
 
         In MVP, this stub simply packages the divergence info. In production it
@@ -178,11 +209,19 @@ class OrchestratorPrincipal:
         micro-service. Having a dedicated method allows easy mocking in unit
         tests.
         """
-        # For now, just echo a simulated arbiter decision.
-        summary = (
-            "[ARB] Divergent recommendations detected. Forwarded to O3-mini arbiter. "
-            f"Justification: {divergence_output.justification}"
+        # Build request object and call micro-service (async HTTP)
+        request = ArbiterRequest(
+            report_a=report_a,
+            report_b=report_b,
+            justification=divergence_output.justification,
+            session_id=session_id,
         )
+        arb_resp: ArbiterResponse = await async_retry(send_to_arbiter, request, retries=2)
+
+        summary = (
+            f"[ARB] Veredicto: {arb_resp.verdict}. Racional: {arb_resp.rationale}"
+        )
+
         return GenericOutput(response=summary)
 
     async def process_specialist_outputs(

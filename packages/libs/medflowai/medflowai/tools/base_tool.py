@@ -8,7 +8,7 @@ It uses Pydantic for defining the input schema of the tool.
 
 from abc import ABC, abstractmethod
 from typing import Type, Any, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class BaseTool(ABC, BaseModel):
     """
@@ -20,8 +20,7 @@ class BaseTool(ABC, BaseModel):
     description: str
     input_schema: Type[BaseModel]
 
-    class Config:
-        arbitrary_types_allowed = True # Allows Type[BaseModel]
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @abstractmethod
     async def execute(self, **kwargs: Any) -> Any:
@@ -76,14 +75,14 @@ if __name__ == "__main__":
     # Example of defining and using a BaseTool derivative:
     class ExampleToolInput(BaseModel):
         target_entity: str
-        max_results: Optional[int] = 5
+        max_results: int = 5
 
     class SearchKnowledgeBaseTool(BaseTool):
         name: str = "search_knowledge_base"
         description: str = "Searches the knowledge base for a given entity."
         input_schema: Type[BaseModel] = ExampleToolInput
 
-        async def execute(self, target_entity: str, max_results: Optional[int] = 5) -> Dict[str, Any]:
+        async def execute(self, target_entity: str, max_results: int = 5) -> Dict[str, Any]:
             # In a real scenario, this would interact with a knowledge base.
             print(f"Executing SearchKnowledgeBaseTool: Searching for '{target_entity}', max results: {max_results}")
             # Simulate results
