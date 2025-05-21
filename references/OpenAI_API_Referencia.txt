@@ -7,6 +7,9 @@
 *   [Docs](https://platform.openai.com/docs)
 *   [API reference](https://platform.openai.com/docs/api-reference) (Esta página)
 
+
+
+
 ## Introdução
 
 Esta referência da API descreve as APIs RESTful, de streaming e em tempo real que você pode usar para interagir com a plataforma OpenAI. As APIs REST podem ser usadas via HTTP em qualquer ambiente que suporte solicitações HTTP. SDKs específicos de linguagem estão listados na [página de bibliotecas](https://platform.openai.com/docs/libraries).
@@ -9904,3 +9907,99 @@ Eventos são emitidos sempre que um novo objeto é criado, transita para um novo
     "total_tokens": 12
   }
 }
+
+## OpenAI Responses API – Atualização 21-Mai-2025
+
+Este documento resume as novas ferramentas, recursos e mudanças anunciadas em 21-Mai-2025 para a API **Responses** da OpenAI. Ele complementa, mas não substitui, `OpenAI_API_Referencia.txt`.
+
+---
+
+### 1. Novas Ferramentas Integradas
+
+| Tool                    | Descrição (high-level)                                           | Modelos Suportados | Notas |
+|-------------------------|------------------------------------------------------------------|--------------------|-------|
+| **remote MCP server**   | Permite conectar LLM a servidores MCP remotos via protocolo MCP. | GPT-4o, GPT-4.1, o1/o3/o4-mini | Necessário `type: "mcp"` + `server_label` & `server_url` |
+| **image_generation**    | Gera imagens em tempo real (streaming / edits) usando `gpt-image-1`. | o3 (reasoning), GPT-4o series  | Também existe API Images dedicada. |
+| **code_interpreter**    | Executa código (Python) para análise de dados, matemática, etc.   | o3, o4-mini, GPT-4o, GPT-4.1   | `container.type: "auto"` recomendado. |
+| **file_search (v2)**    | Busca vetorial em múltiplos stores com filtros por atributo.      | Todos reasoning    | Custos US$ 0,10/GB/dia + US$ 2,50/1k calls. |
+
+### 2. Novos Recursos da API
+
+| Recurso                 | Descrição | Parâmetros-chave |
+|-------------------------|-----------|------------------|
+| **background mode**     | Executa tarefas longas de forma assíncrona. | `background=true` + polling ou streaming |
+| **reasoning summaries** | Gera resumo em linguagem natural da cadeia de raciocínio. | `reasoning.summary="auto"` |
+| **encrypted reasoning items** | Reutiliza itens de raciocínio de forma criptografada (ZDR). | `include=["reasoning.encrypted_content"]`, `store=false` |
+
+### 3. Exemplos de Uso (Python SDK v1.5+)
+
+#### Chamar MCP remoto (Stripe)
+```python
+response = client.responses.create(
+    model="o3",
+    tools=[{
+        "type": "mcp",
+        "server_label": "stripe",
+        "server_url": "https://mcp.stripe.com",
+        "headers": {"Authorization": "Bearer <api-key>"}
+    }],
+    input="user_291471 used 700 minutes of storage at $0.30/minute. Generate a payment link for this."
+)
+```
+
+#### Usar Code Interpreter + Reasoning Summary
+```python
+response = client.responses.create(
+    model="o4-mini",
+    tools=[{
+        "type": "code_interpreter",
+        "container": {"type": "auto"}
+    }],
+    instructions="You are a personal math tutor. When asked a math question, run code to answer the question.",
+    input="Solve 3x + 11 = 14",
+    reasoning={"summary": "auto"}
+)
+```
+
+#### Executar em Background
+```python
+response = client.responses.create(
+    model="o3",
+    input="Write me an extremely long story.",
+    reasoning={"effort": "high"},
+    background=True
+)
+```
+
+#### Encrypted Reasoning Items
+```python
+response = client.responses.create(
+    model="o3",
+    input="Implement a simple web server in Rust from scratch.",
+    store=False,
+    include=["reasoning.encrypted_content"]
+)
+```
+
+##### Observações
+* `image_generation` suporta streaming em tempo real de prévias e **multi-turn edits** – você pode refinar a imagem passo-a-passo na mesma conversa.
+* Modelos **o3** e **o4-mini** conseguem invocar ferramentas direto no *chain-of-thought*, preservando *reasoning tokens* entre requisições para menor custo/latência.
+
+---
+
+### 4. Preços (Maio/2025)
+
+* **image_generation** – US$ 5 / 1M tokens de entrada (texto), US$ 10 / 1M tokens de entrada (imagem), US$ 40 / 1M tokens de saída (imagem), 75 % off em tokens de entrada em cache.
+* **code_interpreter** – US$ 0,03 por container iniciado.
+* **file_search** – US$ 0,10 por GB/dia de armazenamento vetorial + US$ 2,50 / 1k chamadas de ferramenta.
+* **remote MCP** – sem custo adicional; cobra-se apenas pelos tokens de saída.
+
+---
+
+
+### 6. Ecossistema MCP
+
+* Servidores MCP populares: **Cloudflare**, **Hubspot**, **Intercom**, **PayPal**, **Plaid**, **Shopify**, **Stripe**, **Square**, **Twilio**, **Zapier**, **DeepWiki (Devin)** e outros.
+* A OpenAI ingressou no *MCP Steering Committee* para impulsionar o padrão.
+
+*Documento gerado automaticamente em 21-Mai-2025.*

@@ -150,6 +150,15 @@ class GoogleGeminiAdapter(BaseLLMAdapter):
     async def completion(self, prompt: str, model_name: str, **kwargs) -> UnifiedLLMResponse:
         return await self.chat_completion(messages=[{"role": "user", "content": prompt}], model_name=model_name, **kwargs)
 
+    async def responses_create(self, messages: List[Dict[str, str]], model_name: str, **kwargs) -> UnifiedLLMResponse:
+        """Gemini SDK does not yet expose a dedicated Responses API; fallback to chat_completion.
+
+        The method exists to satisfy :class:`BaseLLMAdapter` and allow calling
+        code to remain transport-agnostic. Behaviour is identical to
+        :pyfunc:`chat_completion` for the time being.
+        """
+        return await self.chat_completion(messages=messages, model_name=model_name, **kwargs)
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)

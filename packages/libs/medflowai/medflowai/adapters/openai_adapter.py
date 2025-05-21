@@ -101,6 +101,67 @@ class OpenAIAdapter(BaseLLMAdapter):
             logger.error(f"Unexpected error during OpenAI chat completion: {e}", exc_info=True)
             return UnifiedLLMResponse(error=f"UnexpectedError: {e}", raw_response=str(e), model=model_name)
 
+    async def responses_create(self, messages: List[Dict[str, str]], model_name: str, **kwargs) -> UnifiedLLMResponse:
+        """Generate a response using OpenAI's newer *Responses* endpoint.
+
+        This wraps :pyfunc:`openai.AsyncOpenAI.responses.create` and maps the
+        provider-specific output into :class:`medflowai.models.common_types.UnifiedLLMResponse`.
+        The signature intentionally mirrors :pyfunc:`chat_completion` to allow
+        drop-in replacement from calling code.
+        """
+        try:
+            api_params = {
+                "model": model_name,
+                "messages": messages,
+                **kwargs,
+            }
+
+            response = await self.client.responses.create(**api_params)
+            # current beta shape is similar to chat completions: first choice
+            first_choice = response.choices[0]
+            message_content = first_choice.message.content if hasattr(first_choice.message, "content") else None
+            tool_calls_data = None
+            if getattr(first_choice.message, "tool_calls", None):
+                tool_calls_data = [
+                    {
+                        "id": tc.id,
+                        "type": tc.type,
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        },
+                    }
+                    for tc in first_choice.message.tool_calls
+                ]
+
+            return UnifiedLLMResponse(
+                id=response.id,
+                object=response.object,
+                created=response.created,
+                model=response.model,
+                content=message_content,
+                tool_calls=tool_calls_data,
+                finish_reason=first_choice.finish_reason,
+                usage=response.usage.model_dump() if response.usage else None,
+                system_fingerprint=getattr(response, "system_fingerprint", None),
+                raw_response=response.model_dump_json(),
+            )
+        except openai.APIConnectionError as e:
+            logger.error(f"OpenAI API connection error (responses): {e}", exc_info=True)
+            return UnifiedLLMResponse(error=f"APIConnectionError: {e}", raw_response=str(e), model=model_name)
+        except openai.RateLimitError as e:
+            logger.error(f"OpenAI API rate limit exceeded (responses): {e}", exc_info=True)
+            return UnifiedLLMResponse(error=f"RateLimitError: {e}", raw_response=str(e), model=model_name)
+        except openai.AuthenticationError as e:
+            logger.error(f"OpenAI API authentication error (responses): {e}", exc_info=True)
+            return UnifiedLLMResponse(error=f"AuthenticationError: {e} - Check API key.", raw_response=str(e), model=model_name)
+        except openai.APIStatusError as e:
+            logger.error(f"OpenAI API status error (responses, code {e.status_code}): {e.message}", exc_info=True)
+            return UnifiedLLMResponse(error=f"APIStatusError {e.status_code}: {e.message}", raw_response=str(e), model=model_name)
+        except Exception as e:
+            logger.error(f"Unexpected error during OpenAI responses.create: {e}", exc_info=True)
+            return UnifiedLLMResponse(error=f"UnexpectedError: {e}", raw_response=str(e), model=model_name)
+
     async def completion(self, prompt: str, model_name: str, **kwargs) -> UnifiedLLMResponse:
         """
         Generates a standard completion (not chat) using older OpenAI models if needed.

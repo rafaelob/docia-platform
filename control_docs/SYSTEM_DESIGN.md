@@ -162,7 +162,23 @@ Key points:
 * Fallback to Gemini on GPT failure.
 * Integrated into Orchestrator branching (see T-17).
 
-### 8.4 External Services (Infra)
+### 8.4 Orchestration Engine (YAML-Driven)
+
+MedflowAI’s **dynamic orchestration engine** allows declarative definition of agent/tool workflows via YAML files that live under `config/orchestrations/` (e.g., `dual_llm_v1.yaml`).  A run-time loader (`medflowai.core.orchestration_config.load_orchestration_config`) validates the document with Pydantic before the `OrchestratorPrincipal` executes it.
+
+Key capabilities:
+
+| Capability | Details |
+|------------|---------|
+| Sequential & Parallel Steps | `type: agent` or `type: parallel` with sub-`agents` list. |
+| Conditional Execution       | `condition` field evaluated against runtime context (Python `eval` sandbox) before a step runs. |
+| Error Handling              | `on_error: retry|skip|abort` with exponential back-off via `async_retry`. |
+| Env Var Validation          | YAML `env:` list enforces presence of secrets; can be bypassed in CI using `SKIP_ORCH_ENV_VALIDATION=1`. |
+| Shared Context              | Outputs automatically persisted to `_flow_context` and can be referenced by later steps (`{{ triage_output }}` placeholder planned). |
+
+Environment variable **`ORCHESTRATION_ID`** selects a config at runtime; defaults to `dual_llm_v1`.  Tests/CI can pass `SKIP_ORCH_ENV_VALIDATION` to ignore secret checks.
+
+### 8.5 External Services (Infra)
 
 | Service     | Purpose                         | Access Pattern        |
 |-------------|---------------------------------|-----------------------|

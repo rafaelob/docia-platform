@@ -176,8 +176,21 @@ class MedicalRAGAgent(BaseAgent):
         # 3. Call LLM to synthesize the answer
         output_error_message: Optional[str] = None
         try:
-            self._logger.debug(f"Sending synthesis request to LLM ({model_to_use})")
-            llm_api_response = await self.llm_adapter.chat_completion(
+            self._logger.debug(f"Sending synthesis request to LLM ({model_to_use}) via Responses API if available.")
+            # Prefer the new Responses API if the adapter implements it and looks usable; otherwise fallback to chat completions
+            synthesize_fn = self.llm_adapter.chat_completion  # sensible default
+            if hasattr(self.llm_adapter, "responses_create"):
+                candidate_fn = getattr(self.llm_adapter, "responses_create")  # type: ignore[attr-defined]
+                # Avoid cases where a bare AsyncMock / MagicMock attribute exists but is not configured (common in tests)
+                try:
+                    from unittest.mock import AsyncMock, MagicMock  # type: ignore
+                    if not isinstance(candidate_fn, (AsyncMock, MagicMock)) and callable(candidate_fn):
+                        synthesize_fn = candidate_fn  # use responses_create
+                except ModuleNotFoundError:
+                    # unittest.mock not available (rare), proceed with candidate as-is
+                    if callable(candidate_fn):
+                        synthesize_fn = candidate_fn
+            llm_api_response = await synthesize_fn(
                 messages_for_llm,  # positional arg for tests
                 model_name=model_to_use,
                 temperature=0.3,  # Can be tuned

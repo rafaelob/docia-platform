@@ -63,6 +63,31 @@ class BaseLLMAdapter(ABC):
         """
         pass
 
+    @abstractmethod
+    async def responses_create(
+        self,
+        messages: List[Dict[str, str]],
+        model_name: str,
+        **kwargs,
+    ) -> UnifiedLLMResponse:
+        """Generate a response using the provider's *Responses* endpoint (if available).
+
+        This mirrors :pyfunc:`chat_completion` but uses the newer, message-based
+        endpoint exposed as ``/responses`` by OpenAI and potentially other
+        vendors.
+
+        Args:
+            messages (List[Dict[str, str]]): Conversation formatted as a list of
+                message dicts (e.g. OpenAI chat format).
+            model_name (str): The model to use for the request.
+            **kwargs: Additional model-specific parameters (e.g. temperature).
+
+        Returns:
+            UnifiedLLMResponse: Standardised wrapper around the provider's raw
+                response so that calling code can remain vendor-agnostic.
+        """
+        pass
+
     # Optional: Add methods for other LLM functionalities like embeddings, fine-tuning, etc.
     # async def get_embeddings(self, texts: List[str], model_name: str, **kwargs) -> List[List[float]]:
     #     pass

@@ -17,7 +17,7 @@ Key: `[x]` Done | `[~]` WIP / In Progress | `[ ]` To Do
 | `[ ]`  | T-07    | Backend | 14‑Mai | 5   | Integração Juiz **O3‑mini** + validação Pydantic               |
 | `[ ]`  | T-08    | DevOps  | 16‑Mai | 2   | Otel Collector + dashboards                                    |
 | `[ ]`  | T-09    | QA      | 17‑Mai | 3   | Testes E2E (happy‑path & divergência)                          |
-| `[ ]`  | T-10    | Release | 20‑Mai | 1   | Tag 0.9.0‑beta + changelog                                     |
+| `[ ]`  | T-10    | Release | 21-Mai | 1   | Tag 0.9.0-beta + changelog (pending doc-sync)                   |
 | `[ ]`  | T-11    | Backend | 18‑Mai | 3   | Implementar `packages/reconcil/divergence.py` conforme ADR-005 |
 | `[ ]`  | T-12    | QA      | 19‑Mai | 3   | Pytest cobrindo regras 1-5 (≥ 90 % cobertura)                  |
 | `[ ]`  | T-13    | DevOps  | 20‑Mai | 2   | Atualizar painel OTEL com `divergence_rate`                    |
@@ -27,15 +27,19 @@ Key: `[x]` Done | `[~]` WIP / In Progress | `[ ]` To Do
 | `[x]`  | T-17    | Backend | 13-Mai | 3   | Integrate DivergenceReviewAgent into Orchestrator – `process_specialist_outputs` + arbiter stub + tests |
 | `[x]`  | T-18    | Backend | 14-Mai | 2   | O3-mini Arbiter micro-service (`packages/services/arbiter-o3`) integrado ao Orchestrator + unit tests |
 | `[x]`  | T-19    | Backend | 20-Mai | 5   | Enhance `OrchestratorPrincipal` with branching & retry |
-| `[~]`  | T-20    | QA      | 17-Mai | 3   | Unit tests (>85 %) for adapters, RAG, **divergence agent**, orchestrator |
+| `[x]`  | T-20    | QA      | 21-Mai | 3   | Unit tests (>85 %) for adapters, RAG, **divergence agent**, orchestrator (all green, 1 skip) |
 | `[ ]`  | T-21    | QA      | 17-Mai | 3   | E2E tests (happy-path & divergence flow)                      |
 | `[x]`  | T-22    | DevOps  | 11-Mai | 2   | docker-compose.dev com Redis + Supabase + OTEL |
 | `[x]`  | T-23    | Backend | 12-Mai | 3   | Implement Supabase DAL (`medflowai.db.supabase_client`) |
 | `[~]`  | T-24    | QA      | 13-Mai | 2   | Fixture pytest-docker + test_db_case_flow |
 | `[x]`  | T-30    | Backend |        |     | Create central prompt registry for agents and reference in docs |
 | `[x]`  | T-38    | Backend | 20-Mai | 3   | Implement YAML schema + default `dual_llm_v1.yaml` + loader tests (orchestration variants framework) |
+| `[ ]`  | T-40    | Backend | 22-Mai | 5   | Integrar suporte a ferramentas Responses API (MCP, image_generation, code_interpreter, file_search v2) em `OpenAIAdapter` & `ToolRegistry` |
+| `[ ]`  | T-41    | Backend | 22-Mai | 3   | Implementar `ImageGenerationTool`, `CodeInterpreterTool`, estender `RAGTool` com nova sintaxe de file_search |
+| `[ ]`  | T-42    | QA      | 23-Mai | 3   | Unit tests para novos tools e adapter calls |
+| `[ ]`  | T-43    | Docs    | 22-Mai | 1   | Atualizar `SYSTEM_DESIGN.md` seção ferramental & fluxo |
 
-**Total story points for sprint:** 72
+**Total story points for sprint:** 82
 
 ---
 

@@ -23,7 +23,8 @@ _Source: Legacy FEATURES.txt, Last Updated: 2025-05-10_
 | F-15 | MedicalRAGAgent patient context  | ✅ New field `patient_context` enriches retrieval; unit tests green |
 | F-16 | DivergenceReviewAgent   | ✅ Implemented | LLM-based qualitative comparison of two specialist reports. Returns `equivalent` or `divergent` with justification per ADR-005; integrated into medflowai.agents and unit-tested. |
 | F-17 | Central prompt registry (`PROMPTS.md`) | ✅ Implemented |
-| F-18 | YAML-driven orchestrations (`orchestration_config.load`) | ✅ Implemented | Declarative workflow definitions with support for sequential/parallel steps, error handling, and environment validation. |
+| F-18 | YAML-driven orchestrations (`orchestration_config.load`) | ✅ Implemented | Declarative workflow definitions with sequential & parallel steps, conditional execution, retry, and `SKIP_ORCH_ENV_VALIDATION` helper for tests/CI. |
+| F-19 | (removed) |
 
 ### Clinical Reconciliation (MVP)
 
@@ -87,6 +88,12 @@ _Source: Legacy FEATURES.txt, Last Updated: 2025-05-10_
 *   **Full Pydantic-AI Integration**: Leveraging Pydantic-AI for direct parsing and validation of LLM outputs against Pydantic models.
 *   **Observability & Logging**: Structured logging throughout the library for integration with OTEL and monitoring systems.
 *   **Asynchronous Operations**: Full support for asynchronous operations in agents and tools for improved performance.
+*   **Remote MCP Server Support**: Agents can now connect to any MCP-compatible server via the Responses API (`type: "mcp"`).
+*   **Image Generation Tool**: Support for `gpt-image-1` via Responses API (`type: "image_generation"`).
+*   **Code Interpreter Tool**: Inline Python execution for complex reasoning (`type: "code_interpreter"`).
+*   **File Search v2**: Multi-vector-store retrieval with attribute filters via Responses API.
+*   **Background Mode & Reasoning Summaries**: Long-running tasks and explainability baked into orchestrator calls.
+*   **Encrypted Reasoning Items (ZDR)**: Secure reuse of reasoning contexts across requests.
 
 ---
 *This document reflects the feature set as of the last update and will evolve with the project.*

@@ -5,6 +5,7 @@ trigger: always_on
 # Development Environment & Workflow
 
 - Version Control: **Git** (GitHub). Branch model: Git Flow with `main`, `develop`, `feature/*`, `hotfix/*`.
+- We are in Windows Terminal, so use ';' for multiples commands.
 - Build / Package Managers: **Poetry** (Python), **pnpm** (Node/TS). Docker Compose for local infra.
 - Deployment Environments: Dev → Staging → Prod via GitHub Actions, Docker, Terraform.
 - Development Workflow: PRs require CI passing (lint, tests ≥85% cov). Reviews from another squad member. Features tracked in control_docs/TODO.md.

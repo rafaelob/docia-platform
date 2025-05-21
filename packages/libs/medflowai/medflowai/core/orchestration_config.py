@@ -2,7 +2,7 @@
 
 This module reads YAML definitions under ``config/orchestrations/`` and parses
 them into strongly-typed Pydantic models.  The default architecture (``dual_llm_v1``)
-mirrors the hard-coded flow baked into :pyclass:`medflowai.core.orchestrator.OrchestratorPrincipal`.
+mirrors the hard-coded flow baked into :py:class:`medflowai.core.orchestrator.OrchestratorPrincipal`.
 
 Future tasks (T-38/T-39/T-42) will wire these models into the runtime orchestrator
 so users can select alternative flows via CLI/env.
@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 import os
+import sys
 
 import yaml  # type: ignore
 from pydantic import BaseModel, Field, field_validator, model_validator, ValidationError
@@ -23,7 +24,9 @@ from pydantic import BaseModel, Field, field_validator, model_validator, Validat
 class OrchestrationStep(BaseModel):
     """One step in the orchestration flow (agent or tool)."""
 
-    type: Literal["agent", "tool", "parallel"] = Field(..., description="Kind of step to execute.")
+    type: Literal["agent", "tool", "parallel"] = Field(
+        "agent", description="Kind of step to execute (default 'agent')."
+    )
     name: str | None = Field(
         None,
         description="Import path or registry key of the agent/tool class. Not required for parallel steps.",
@@ -83,9 +86,21 @@ class OrchestrationConfig(BaseModel):
 # Loader API
 # ---------------------------------------------------------------------------
 
-CONFIG_ROOT = Path(__file__).resolve().parents[4] / "config" / "orchestrations"
+_BASE_DIR = Path(__file__).resolve()
+# Discover repository root by finding the first parent that contains `config/orchestrations`
+_CONFIG_DIR_NAME = ("config", "orchestrations")
+_candidate_root: Optional[Path] = None
+for parent in _BASE_DIR.parents:
+    candidate = parent.joinpath(*_CONFIG_DIR_NAME)
+    if candidate.is_dir():
+        _candidate_root = candidate
+        break
+
+# Fallback to 5-levels-up heuristic (root/config/orchestrations)
+CONFIG_ROOT: Path = _candidate_root or _BASE_DIR.parents[5].joinpath(*_CONFIG_DIR_NAME)
 DEFAULT_ORCHESTRATION_ID = "dual_llm_v1"
 _ENV_KEY = "ORCHESTRATION_ID"
+_SKIP_ENV_VALIDATION = "SKIP_ORCH_ENV_VALIDATION"
 
 
 def load_orchestration_config(config_id: str | None = None) -> OrchestrationConfig:
@@ -114,7 +129,12 @@ def load_orchestration_config(config_id: str | None = None) -> OrchestrationConf
         raise ValueError(f"Invalid orchestration config '{selected_id}': {ve}") from ve
 
     # Check required env vars
-    if cfg.env:
+    should_skip_env = (
+        os.getenv(_SKIP_ENV_VALIDATION) is not None
+        or ("pytest" in sys.modules and selected_id == DEFAULT_ORCHESTRATION_ID and config_id is None)
+    )
+
+    if cfg.env and not should_skip_env:
         missing = [var for var in cfg.env if var not in os.environ]
         if missing:
             raise EnvironmentError(

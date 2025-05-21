@@ -12,6 +12,7 @@ from typing import Optional
 import httpx
 from pydantic import BaseModel, Field, ConfigDict
 
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -66,4 +67,5 @@ async def send_to_arbiter(request: ArbiterRequest) -> ArbiterResponse:  # pragma
             # Assume arbiter returns JSON matching ArbiterResponse schema
             return ArbiterResponse.model_validate(response.json())
         except Exception as exc:  # noqa: BLE001
-            return ArbiterResponse(verdict="fallback", rationale=f"Arbiter unreachable: {exc}")
+            # On failure, return a safe default verdict value to satisfy enum validation.
+            return ArbiterResponse(verdict=Verdict.cannot_decide, rationale=f"Arbiter unreachable: {exc}")

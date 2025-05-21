@@ -8,6 +8,8 @@ coordinating tool usage within the MedflowAI library.
 
 import uuid
 from typing import Dict, Any, Optional, Type, List
+import asyncio
+from jinja2 import Template
 
 from ..adapters.base_llm_adapter import BaseLLMAdapter  # Adjusted path
 from .base_agent import BaseAgent  # Correct path
@@ -78,6 +80,7 @@ class OrchestratorPrincipal:
         self.orchestration_config: OrchestrationConfig = (
             orchestration_config or load_orchestration_config()
         )
+        self._flow_context: dict[str, Any] = {}
 
     def _get_context_manager_for_session(self, session_id: str) -> ContextManager:
         """
@@ -87,6 +90,63 @@ class OrchestratorPrincipal:
             session_id = f"default_session_{str(uuid.uuid4())}"
             # print(f"Warning: No session_id provided. Using temporary session: {session_id}")
         return ContextManager(session_id=session_id, store=self.context_store_instance)
+
+    async def _execute_step(self, step, user_query: str, ctx_mgr: ContextManager):
+        """Executes a single step (agent/tool or parallel)."""
+        # Check condition
+        if getattr(step, "condition", None):
+            condition_val = bool(Template(step.condition).render(**self._flow_context))
+            if not condition_val:
+                return
+        if step.type in ("agent", "tool"):
+            await self._run_single(step, user_query, ctx_mgr)
+        elif step.type == "parallel":
+            await self._run_parallel(step, user_query, ctx_mgr)
+
+    async def _run_single(self, step, user_query: str, ctx_mgr: ContextManager):
+        name = step.name
+        if step.type == "agent":
+            agent = self.agent_map.get(name)
+            if not agent:
+                raise ValueError(f"Agent {name} not found")
+            input_model = agent.input_schema(query=user_query)
+            try:
+                output: GenericOutput = await agent.run(input_model, ctx_mgr)
+                self._flow_context[f"{name}_output"] = output.response
+            except Exception as exc:
+                if step.on_error == "retry":
+                    output = await async_retry(lambda: agent.run(input_model, ctx_mgr))
+                    self._flow_context[f"{name}_output"] = output.response
+                elif step.on_error == "skip":
+                    return
+                else:
+                    raise exc
+        else:
+            tool_cls = self.tool_registry.get(name)
+            if not tool_cls:
+                raise ValueError(f"Tool {name} not registered")
+            tool = tool_cls()
+            try:
+                result = await tool.execute(user_query, ctx_mgr)
+                self._flow_context[f"{name}_output"] = result
+            except Exception as exc:
+                if step.on_error == "retry":
+                    result = await async_retry(lambda: tool.execute(user_query, ctx_mgr))
+                    self._flow_context[f"{name}_output"] = result
+                elif step.on_error == "skip":
+                    return
+                else:
+                    raise exc
+
+    async def _run_parallel(self, step, user_query: str, ctx_mgr: ContextManager):
+        tasks = []
+        for sub in step.agents:
+            tasks.append(self._run_single(sub, user_query, ctx_mgr))
+        await asyncio.gather(*tasks, return_exceptions=False)
+
+    async def _execute_flow(self, user_query: str, ctx_mgr: ContextManager):
+        for step in self.orchestration_config.flow:
+            await self._execute_step(step, user_query, ctx_mgr)
 
     async def process_query(
         self,
@@ -156,6 +216,12 @@ class OrchestratorPrincipal:
             error_content = f"Error processing your request with agent {selected_agent.agent_name}: {str(e)}"
             context_manager.add_message(role="assistant", content=error_content)
             return GenericOutput(response="An error occurred while processing your request.", error_message=str(e))
+
+        # If orchestration config has flow definition, execute it instead of default agent
+        if self.orchestration_config and self.orchestration_config.flow:
+            await self._execute_flow(user_query, context_manager)
+            # Return last agent output if available
+            return self._flow_context.get("last_output", "")
 
     async def review_divergence(
         self,
