@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "medflowai"
-version = "0.1.0"
+version = "0.1.1"
 description = "Core library for MedflowAI platform"
 authors = ["Rafael Oliveira <rafael.oliveira.b@gmail.com>"]
 readme = "README.md"
